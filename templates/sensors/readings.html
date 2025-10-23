@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Sensor Readings: {{ sensor.model }} - Microclimate Sensor Grid{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="mb-4">
+        <a href="{{ url_for('sensors_list') }}" class="btn btn-secondary mb-2">
+            <i class="bi bi-arrow-left"></i> Back to Sensors
+        </a>
+        <h1><i class="bi bi-graph-up"></i> Readings for {{ sensor.model }}</h1>
+        <p class="text-muted">
+            Type: <strong>{{ sensor.sensor_type.name }}</strong> | 
+            Location: <strong>{{ sensor.location.area_name }}</strong> |
+            Status: 
+            {% if sensor.status == 'ACTIVE' %}
+            <span class="badge bg-success">Active</span>
+            {% elif sensor.status == 'INACTIVE' %}
+            <span class="badge bg-secondary">Inactive</span>
+            {% else %}
+            <span class="badge bg-warning">Maintenance</span>
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">All Readings (Using Stored Procedure)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Reading ID</th>
+                            <th>Value</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reading in readings %}
+                        <tr>
+                            <td>{{ reading[0] }}</td>
+                            <td><strong>{{ reading[4] }}</strong></td>
+                            <td>{{ reading[5] }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No readings found for this sensor</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
