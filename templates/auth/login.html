@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Microclimate Sensor Grid{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <i class="bi bi-cloud-sun" style="font-size: 3rem;"></i>
+                    <h3 class="mb-0 mt-2">Microclimate Sensor Grid</h3>
+                    <p class="mb-0">Management System</p>
+                </div>
+                <div class="card-body p-4">
+                    <h4 class="text-center mb-4">Login to Your Account</h4>
+                    
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="bi bi-person"></i> Username
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   required autofocus placeholder="Enter your username">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="bi bi-lock"></i> Password
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   required placeholder="Enter your password">
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">
+                                Remember me
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right"></i> Login
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <p class="mb-0">Don't have an account?</p>
+                        <a href="{{ url_for('signup') }}" class="btn btn-outline-success mt-2">
+                            <i class="bi bi-person-plus"></i> Create New Account
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer text-center text-muted">
+                    <small>UE23CS351A Mini Project</small>
+                </div>
+            </div>
+
+            <!-- Demo Credentials Info -->
+            <div class="alert alert-info mt-3" role="alert">
+                <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Demo Credentials</h6>
+                <p class="mb-0">
+                    <strong>Username:</strong> admin<br>
+                    <strong>Password:</strong> admin123
+                </p>
+                <hr>
+                <small class="text-muted">Or create a new account using the signup form</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 15px;
+    }
+    
+    .card-header {
+        border-radius: 15px 15px 0 0 !important;
+    }
+    
+    .form-control:focus {
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Remove navbar and footer for login page
+    document.addEventListener('DOMContentLoaded', function() {
+        const navbar = document.querySelector('nav.navbar');
+        const footer = document.querySelector('footer');
+        if (navbar) navbar.style.display = 'none';
+        if (footer) footer.style.display = 'none';
+    });
+</script>
+{% endblock %}

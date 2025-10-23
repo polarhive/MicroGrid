@@ -12,6 +12,20 @@ USE microclimate_grid;
 -- TABLE DEFINITIONS
 -- =====================================================
 
+-- Table: User (for authentication)
+CREATE TABLE User (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP NULL,
+    INDEX idx_username (username),
+    INDEX idx_email (email)
+);
+
 -- Table: SensorType
 CREATE TABLE SensorType (
     type_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -233,6 +247,12 @@ DELIMITER ;
 -- =====================================================
 -- SAMPLE DATA
 -- =====================================================
+
+-- Insert Users (password is 'admin123' hashed with werkzeug)
+-- Password hash generated using: werkzeug.security.generate_password_hash('admin123')
+INSERT INTO User (username, email, password_hash, full_name, is_active) VALUES
+('admin', 'admin@microclimate.com', 'scrypt:32768:8:1$RDhqhekc2l0UI32I$0f1bc8c5a56e0d6b03078b937cc108e691809b313e15a091784487752f04b822c4b7bf25e8d7020bcf33af75160d43d92174de99521da9b61247c70a65863f09', 'System Administrator', TRUE),
+('demo', 'demo@microclimate.com', 'scrypt:32768:8:1$RDhqhekc2l0UI32I$0f1bc8c5a56e0d6b03078b937cc108e691809b313e15a091784487752f04b822c4b7bf25e8d7020bcf33af75160d43d92174de99521da9b61247c70a65863f09', 'Demo User', TRUE);
 
 -- Insert Sensor Types
 INSERT INTO SensorType (name, description) VALUES
@@ -461,6 +481,7 @@ CREATE INDEX idx_maintenance_date ON MaintenanceEvent(event_date);
 -- =====================================================
 
 -- Verify data insertion
+SELECT 'User Count:', COUNT(*) FROM User;
 SELECT 'SensorType Count:', COUNT(*) FROM SensorType;
 SELECT 'Location Count:', COUNT(*) FROM Location;
 SELECT 'Sensor Count:', COUNT(*) FROM Sensor;

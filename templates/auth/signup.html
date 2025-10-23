@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - Microclimate Sensor Grid{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-7 col-lg-6">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white text-center py-4">
+                    <i class="bi bi-person-plus-fill" style="font-size: 3rem;"></i>
+                    <h3 class="mb-0 mt-2">Create New Account</h3>
+                    <p class="mb-0">Join the Sensor Grid Management System</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="bi bi-person"></i> Username <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   required autofocus placeholder="Choose a unique username"
+                                   pattern="[a-zA-Z0-9_]{3,20}" 
+                                   title="3-20 characters, letters, numbers, and underscores only">
+                            <div class="form-text">3-20 characters, letters, numbers, and underscores only</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="bi bi-envelope"></i> Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   required placeholder="your.email@example.com">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="full_name" class="form-label">
+                                <i class="bi bi-person-badge"></i> Full Name
+                            </label>
+                            <input type="text" class="form-control" id="full_name" name="full_name" 
+                                   placeholder="John Doe (optional)">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label">
+                                    <i class="bi bi-lock"></i> Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       required placeholder="At least 6 characters" minlength="6">
+                                <div class="form-text">Minimum 6 characters</div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="confirm_password" class="form-label">
+                                    <i class="bi bi-lock-fill"></i> Confirm Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                       required placeholder="Re-enter password" minlength="6">
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>Note:</strong> After registration, you can login immediately with your credentials.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> Create Account
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <p class="mb-0">Already have an account?</p>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary mt-2">
+                            <i class="bi bi-box-arrow-in-right"></i> Login Instead
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer text-center text-muted">
+                    <small>UE23CS351A Mini Project - PESU University</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 15px;
+    }
+    
+    .card-header {
+        border-radius: 15px 15px 0 0 !important;
+    }
+    
+    .form-control:focus {
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Remove navbar and footer for signup page
+    document.addEventListener('DOMContentLoaded', function() {
+        const navbar = document.querySelector('nav.navbar');
+        const footer = document.querySelector('footer');
+        if (navbar) navbar.style.display = 'none';
+        if (footer) footer.style.display = 'none';
+        
+        // Password match validation
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirm_password');
+        
+        function validatePassword() {
+            if (password.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity("Passwords don't match");
+            } else {
+                confirmPassword.setCustomValidity('');
+            }
+        }
+        
+        password.addEventListener('change', validatePassword);
+        confirmPassword.addEventListener('keyup', validatePassword);
+    });
+</script>
+{% endblock %}

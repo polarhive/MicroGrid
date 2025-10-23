@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from config import config
-from models import db, SensorType, Location, Sensor, Reading, Technician, MaintenanceEvent, SensorStatusLog
+from models import db, User, SensorType, Location, Sensor, Reading, Technician, MaintenanceEvent, SensorStatusLog
 from sqlalchemy import func, text
 from datetime import datetime
 import os
@@ -13,15 +14,122 @@ def create_app(config_name='development'):
     # Initialize extensions
     db.init_app(app)
     
+    # Initialize Flask-Login
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.login_view = 'login'
+    login_manager.login_message = 'Please log in to access this page.'
+    login_manager.login_message_category = 'info'
+    
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+    
     return app
 
 app = create_app(os.getenv('FLASK_ENV', 'development'))
+
+# =====================================================
+# AUTHENTICATION ROUTES
+# =====================================================
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """User login"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        remember = request.form.get('remember', False)
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            if not user.is_active:
+                flash('Your account has been deactivated. Please contact administrator.', 'danger')
+                return redirect(url_for('login'))
+            
+            login_user(user, remember=remember)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            flash(f'Welcome back, {user.full_name or user.username}!', 'success')
+            
+            # Redirect to next page or dashboard
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('index'))
+        else:
+            flash('Invalid username or password. Please try again.', 'danger')
+    
+    return render_template('auth/login.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    """User registration"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        full_name = request.form.get('full_name')
+        
+        # Validation
+        if not username or not email or not password:
+            flash('All fields are required.', 'danger')
+            return redirect(url_for('signup'))
+        
+        if password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('signup'))
+        
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long.', 'danger')
+            return redirect(url_for('signup'))
+        
+        # Check if user exists
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists. Please choose another.', 'danger')
+            return redirect(url_for('signup'))
+        
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered. Please use another or log in.', 'danger')
+            return redirect(url_for('signup'))
+        
+        # Create new user
+        user = User(
+            username=username,
+            email=email,
+            full_name=full_name
+        )
+        user.set_password(password)
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('Account created successfully! Please log in.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('auth/signup.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    """User logout"""
+    logout_user()
+    flash('You have been logged out successfully.', 'info')
+    return redirect(url_for('login'))
 
 # =====================================================
 # HOME & DASHBOARD ROUTES
 # =====================================================
 
 @app.route('/')
+@login_required
 def index():
     """Dashboard with statistics"""
     # Get statistics
@@ -78,6 +186,7 @@ def index():
 # =====================================================
 
 @app.route('/sensor-types')
+@login_required
 def sensor_types_list():
     """List all sensor types"""
     search = request.args.get('search', '')
@@ -90,6 +199,7 @@ def sensor_types_list():
     return render_template('sensor_types/list.html', sensor_types=sensor_types, search=search)
 
 @app.route('/sensor-types/create', methods=['GET', 'POST'])
+@login_required
 def sensor_type_create():
     """Create a new sensor type"""
     if request.method == 'POST':
@@ -106,6 +216,7 @@ def sensor_type_create():
     return render_template('sensor_types/form.html')
 
 @app.route('/sensor-types/<int:type_id>/edit', methods=['GET', 'POST'])
+@login_required
 def sensor_type_edit(type_id):
     """Edit a sensor type"""
     sensor_type = SensorType.query.get_or_404(type_id)
@@ -121,6 +232,7 @@ def sensor_type_edit(type_id):
     return render_template('sensor_types/form.html', sensor_type=sensor_type)
 
 @app.route('/sensor-types/<int:type_id>/delete', methods=['POST'])
+@login_required
 def sensor_type_delete(type_id):
     """Delete a sensor type"""
     sensor_type = SensorType.query.get_or_404(type_id)
@@ -140,6 +252,7 @@ def sensor_type_delete(type_id):
 # =====================================================
 
 @app.route('/locations')
+@login_required
 def locations_list():
     """List all locations"""
     search = request.args.get('search', '')
@@ -152,6 +265,7 @@ def locations_list():
     return render_template('locations/list.html', locations=locations, search=search)
 
 @app.route('/locations/create', methods=['GET', 'POST'])
+@login_required
 def location_create():
     """Create a new location"""
     if request.method == 'POST':
@@ -179,6 +293,7 @@ def location_create():
     return render_template('locations/form.html')
 
 @app.route('/locations/<int:location_id>/edit', methods=['GET', 'POST'])
+@login_required
 def location_edit(location_id):
     """Edit a location"""
     location = Location.query.get_or_404(location_id)
@@ -200,6 +315,7 @@ def location_edit(location_id):
     return render_template('locations/form.html', location=location)
 
 @app.route('/locations/<int:location_id>/delete', methods=['POST'])
+@login_required
 def location_delete(location_id):
     """Delete a location"""
     location = Location.query.get_or_404(location_id)
@@ -219,6 +335,7 @@ def location_delete(location_id):
 # =====================================================
 
 @app.route('/sensors')
+@login_required
 def sensors_list():
     """List all sensors with filtering"""
     search = request.args.get('search', '')
@@ -256,6 +373,7 @@ def sensors_list():
                          location_filter=location_filter)
 
 @app.route('/sensors/create', methods=['GET', 'POST'])
+@login_required
 def sensor_create():
     """Create a new sensor"""
     if request.method == 'POST':
@@ -287,6 +405,7 @@ def sensor_create():
                          locations=locations)
 
 @app.route('/sensors/<int:sensor_id>/edit', methods=['GET', 'POST'])
+@login_required
 def sensor_edit(sensor_id):
     """Edit a sensor"""
     sensor = Sensor.query.get_or_404(sensor_id)
@@ -311,6 +430,7 @@ def sensor_edit(sensor_id):
                          locations=locations)
 
 @app.route('/sensors/<int:sensor_id>/delete', methods=['POST'])
+@login_required
 def sensor_delete(sensor_id):
     """Delete a sensor"""
     sensor = Sensor.query.get_or_404(sensor_id)
@@ -326,6 +446,7 @@ def sensor_delete(sensor_id):
     return redirect(url_for('sensors_list'))
 
 @app.route('/sensors/<int:sensor_id>/readings')
+@login_required
 def sensor_readings(sensor_id):
     """View all readings for a specific sensor"""
     sensor = Sensor.query.get_or_404(sensor_id)
@@ -346,6 +467,7 @@ def sensor_readings(sensor_id):
 # =====================================================
 
 @app.route('/readings')
+@login_required
 def readings_list():
     """List all readings"""
     sensor_filter = request.args.get('sensor', '')
@@ -380,6 +502,7 @@ def readings_list():
                          pagination=pagination)
 
 @app.route('/readings/create', methods=['GET', 'POST'])
+@login_required
 def reading_create():
     """Create a new reading"""
     if request.method == 'POST':
@@ -404,6 +527,7 @@ def reading_create():
     return render_template('readings/form.html', sensors=sensors)
 
 @app.route('/readings/<int:reading_id>/edit', methods=['GET', 'POST'])
+@login_required
 def reading_edit(reading_id):
     """Edit a reading"""
     reading = Reading.query.get_or_404(reading_id)
@@ -426,6 +550,7 @@ def reading_edit(reading_id):
                          sensors=sensors)
 
 @app.route('/readings/<int:reading_id>/delete', methods=['POST'])
+@login_required
 def reading_delete(reading_id):
     """Delete a reading"""
     reading = Reading.query.get_or_404(reading_id)
@@ -441,6 +566,7 @@ def reading_delete(reading_id):
 # =====================================================
 
 @app.route('/technicians')
+@login_required
 def technicians_list():
     """List all technicians"""
     search = request.args.get('search', '')
@@ -462,6 +588,7 @@ def technicians_list():
                          search=search)
 
 @app.route('/technicians/create', methods=['GET', 'POST'])
+@login_required
 def technician_create():
     """Create a new technician"""
     if request.method == 'POST':
@@ -484,6 +611,7 @@ def technician_create():
     return render_template('technicians/form.html')
 
 @app.route('/technicians/<int:tech_id>/edit', methods=['GET', 'POST'])
+@login_required
 def technician_edit(tech_id):
     """Edit a technician"""
     technician = Technician.query.get_or_404(tech_id)
@@ -500,6 +628,7 @@ def technician_edit(tech_id):
     return render_template('technicians/form.html', technician=technician)
 
 @app.route('/technicians/<int:tech_id>/delete', methods=['POST'])
+@login_required
 def technician_delete(tech_id):
     """Delete a technician"""
     technician = Technician.query.get_or_404(tech_id)
@@ -519,6 +648,7 @@ def technician_delete(tech_id):
 # =====================================================
 
 @app.route('/maintenance')
+@login_required
 def maintenance_list():
     """List all maintenance events"""
     sensor_filter = request.args.get('sensor', '')
@@ -550,6 +680,7 @@ def maintenance_list():
                          event_filter=event_filter)
 
 @app.route('/maintenance/create', methods=['GET', 'POST'])
+@login_required
 def maintenance_create():
     """Create a new maintenance event"""
     if request.method == 'POST':
@@ -581,6 +712,7 @@ def maintenance_create():
                          technicians=technicians)
 
 @app.route('/maintenance/<int:maintenance_id>/edit', methods=['GET', 'POST'])
+@login_required
 def maintenance_edit(maintenance_id):
     """Edit a maintenance event"""
     maintenance = MaintenanceEvent.query.get_or_404(maintenance_id)
@@ -607,6 +739,7 @@ def maintenance_edit(maintenance_id):
                          technicians=technicians)
 
 @app.route('/maintenance/<int:maintenance_id>/delete', methods=['POST'])
+@login_required
 def maintenance_delete(maintenance_id):
     """Delete a maintenance event"""
     maintenance = MaintenanceEvent.query.get_or_404(maintenance_id)
@@ -622,6 +755,7 @@ def maintenance_delete(maintenance_id):
 # =====================================================
 
 @app.route('/reports')
+@login_required
 def reports():
     """Reports and analytics page"""
     # Average readings by area
@@ -675,12 +809,14 @@ def reports():
 # =====================================================
 
 @app.route('/api/sensors/<int:sensor_id>')
+@login_required
 def api_sensor(sensor_id):
     """Get sensor details as JSON"""
     sensor = Sensor.query.get_or_404(sensor_id)
     return jsonify(sensor.to_dict())
 
 @app.route('/api/sensors/<int:sensor_id>/latest-reading')
+@login_required
 def api_latest_reading(sensor_id):
     """Get latest reading for a sensor"""
     reading = Reading.query.filter_by(
