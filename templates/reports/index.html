@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics - Microclimate Sensor Grid{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">
+        <i class="bi bi-bar-chart-line"></i> Reports & Analytics
+    </h1>
+
+    <!-- Sensor Status Distribution -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Sensor Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set total = status_dist|sum(attribute=1) %}
+                            {% for status, count in status_dist %}
+                            <tr>
+                                <td>
+                                    {% if status == 'ACTIVE' %}
+                                    <span class="badge bg-success">{{ status }}</span>
+                                    {% elif status == 'INACTIVE' %}
+                                    <span class="badge bg-secondary">{{ status }}</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">{{ status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ count }}</strong></td>
+                                <td>{{ "%.1f"|format((count / total * 100) if total > 0 else 0) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0"><i class="bi bi-wrench"></i> Maintenance Summary (Stored Procedure)</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Event Type</th>
+                                <th>Count</th>
+                                <th>Sensors</th>
+                                <th>Techs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event_type, event_count, sensors_affected, techs_involved in maintenance_summary %}
+                            <tr>
+                                <td>
+                                    {% if event_type == 'CALIBRATION' %}
+                                    <span class="badge bg-info">{{ event_type }}</span>
+                                    {% elif event_type == 'REPAIR' %}
+                                    <span class="badge bg-warning">{{ event_type }}</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">{{ event_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ event_count }}</strong></td>
+                                <td>{{ sensors_affected }}</td>
+                                <td>{{ techs_involved }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Average Readings by Area and Sensor Type -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up"></i> Average Readings by Area & Sensor Type
+                        <small class="text-white-50">(Complex JOIN Query)</small>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Location</th>
+                                    <th>Sensor Type</th>
+                                    <th>Average Value</th>
+                                    <th>Reading Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for area_name, sensor_type, avg_value, reading_count in area_stats %}
+                                <tr>
+                                    <td><strong>{{ area_name }}</strong></td>
+                                    <td><span class="badge bg-info">{{ sensor_type }}</span></td>
+                                    <td><strong>{{ "%.2f"|format(avg_value) if avg_value else 'N/A' }}</strong></td>
+                                    <td>{{ reading_count }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Technicians -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-trophy"></i> Top Technicians by Maintenance Count
+                        <small class="text-white-50">(Stored Procedure)</small>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Tech ID</th>
+                                    <th>Name</th>
+                                    <th>Specialization</th>
+                                    <th>Maintenance Count</th>
+                                    <th>Event Types</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in top_technicians %}
+                                <tr>
+                                    <td>
+                                        {% if loop.index == 1 %}
+                                        <span class="badge bg-warning">🥇</span>
+                                        {% elif loop.index == 2 %}
+                                        <span class="badge bg-secondary">🥈</span>
+                                        {% elif loop.index == 3 %}
+                                        <span class="badge bg-danger">🥉</span>
+                                        {% else %}
+                                        {{ loop.index }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ row[0] }}</td>
+                                    <td><strong>{{ row[1] }}</strong></td>
+                                    <td>{{ row[2] or 'General' }}</td>
+                                    <td><span class="badge bg-primary rounded-pill">{{ row[3] }}</span></td>
+                                    <td>
+                                        {% if row[4] %}
+                                            {% for event in row[4].split(',') %}
+                                            <span class="badge bg-secondary">{{ event }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Status Changes -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history"></i> Recent Sensor Status Changes
+                        <small class="text-white-50">(Trigger Log)</small>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Log ID</th>
+                                    <th>Sensor</th>
+                                    <th>Old Status</th>
+                                    <th></th>
+                                    <th>New Status</th>
+                                    <th>Change Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log, sensor in status_logs %}
+                                <tr>
+                                    <td>{{ log.log_id }}</td>
+                                    <td><strong>{{ sensor.model }}</strong></td>
+                                    <td>
+                                        {% if log.old_status == 'ACTIVE' %}
+                                        <span class="badge bg-success">{{ log.old_status }}</span>
+                                        {% elif log.old_status == 'INACTIVE' %}
+                                        <span class="badge bg-secondary">{{ log.old_status }}</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">{{ log.old_status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><i class="bi bi-arrow-right"></i></td>
+                                    <td>
+                                        {% if log.new_status == 'ACTIVE' %}
+                                        <span class="badge bg-success">{{ log.new_status }}</span>
+                                        {% elif log.new_status == 'INACTIVE' %}
+                                        <span class="badge bg-secondary">{{ log.new_status }}</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">{{ log.new_status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.change_timestamp|datetime }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No status changes recorded</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SQL Features Used -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-database"></i> SQL Features Demonstrated</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-check-circle text-success"></i> Complex Queries</h6>
+                            <ul>
+                                <li>Multi-table JOINs (Location, Sensor, SensorType, Reading)</li>
+                                <li>Aggregate functions (AVG, COUNT, SUM)</li>
+                                <li>GROUP BY with multiple columns</li>
+                                <li>Subqueries and filtering</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-check-circle text-success"></i> Advanced Features</h6>
+                            <ul>
+                                <li>Stored Procedures (GetSensorReadings, GetTopTechnicians, GetMaintenanceSummary)</li>
+                                <li>Triggers (before_sensor_update, after_maintenance_insert)</li>
+                                <li>Views (ActiveSensorsView, LatestReadingsView, MaintenanceStatsView)</li>
+                                <li>Foreign Key Constraints & Cascading</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

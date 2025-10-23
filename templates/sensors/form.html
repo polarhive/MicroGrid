@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if sensor else 'Create' }} Sensor - Microclimate Sensor Grid{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">
+        <i class="bi bi-cpu"></i> {{ 'Edit' if sensor else 'Create' }} Sensor
+    </h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                <div class="mb-3">
+                    <label for="model" class="form-label">Model <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="model" name="model" 
+                           value="{{ sensor.model if sensor else '' }}" required>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="type_id" class="form-label">Sensor Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="type_id" name="type_id" required>
+                            <option value="">Select Type</option>
+                            {% for st in sensor_types %}
+                            <option value="{{ st.type_id }}" 
+                                    {% if sensor and sensor.type_id == st.type_id %}selected{% endif %}>
+                                {{ st.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="location_id" class="form-label">Location <span class="text-danger">*</span></label>
+                        <select class="form-select" id="location_id" name="location_id" required>
+                            <option value="">Select Location</option>
+                            {% for loc in locations %}
+                            <option value="{{ loc.location_id }}" 
+                                    {% if sensor and sensor.location_id == loc.location_id %}selected{% endif %}>
+                                {{ loc.area_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="install_date" class="form-label">Install Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="install_date" name="install_date" 
+                               value="{{ sensor.install_date|date if sensor else '' }}" required>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                        <select class="form-select" id="status" name="status" required>
+                            <option value="ACTIVE" {% if not sensor or sensor.status == 'ACTIVE' %}selected{% endif %}>Active</option>
+                            <option value="INACTIVE" {% if sensor and sensor.status == 'INACTIVE' %}selected{% endif %}>Inactive</option>
+                            <option value="MAINTENANCE" {% if sensor and sensor.status == 'MAINTENANCE' %}selected{% endif %}>Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <a href="{{ url_for('sensors_list') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

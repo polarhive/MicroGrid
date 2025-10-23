@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if technician else 'Create' }} Technician - Microclimate Sensor Grid{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">
+        <i class="bi bi-person-badge"></i> {{ 'Edit' if technician else 'Create' }} Technician
+    </h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="name" name="name" 
+                           value="{{ technician.name if technician else '' }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="contact_no" class="form-label">Contact Number</label>
+                    <input type="tel" class="form-control" id="contact_no" name="contact_no" 
+                           value="{{ technician.contact_no if technician else '' }}" 
+                           pattern="[0-9]{10}" placeholder="10-digit number">
+                </div>
+
+                <div class="mb-3">
+                    <label for="specialization" class="form-label">Specialization</label>
+                    <input type="text" class="form-control" id="specialization" name="specialization" 
+                           value="{{ technician.specialization if technician else '' }}"
+                           placeholder="e.g., Temperature Sensors, General Maintenance">
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <a href="{{ url_for('technicians_list') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

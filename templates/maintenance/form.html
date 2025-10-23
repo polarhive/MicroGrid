@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if maintenance else 'Log' }} Maintenance Event - Microclimate Sensor Grid{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">
+        <i class="bi bi-tools"></i> {{ 'Edit' if maintenance else 'Log' }} Maintenance Event
+    </h1>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="sensor_id" class="form-label">Sensor <span class="text-danger">*</span></label>
+                        <select class="form-select" id="sensor_id" name="sensor_id" required>
+                            <option value="">Select Sensor</option>
+                            {% for sensor in sensors %}
+                            <option value="{{ sensor.sensor_id }}" 
+                                    {% if maintenance and maintenance.sensor_id == sensor.sensor_id %}selected{% endif %}>
+                                {{ sensor.model }} ({{ sensor.sensor_type.name }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="tech_id" class="form-label">Technician <span class="text-danger">*</span></label>
+                        <select class="form-select" id="tech_id" name="tech_id" required>
+                            <option value="">Select Technician</option>
+                            {% for tech in technicians %}
+                            <option value="{{ tech.tech_id }}" 
+                                    {% if maintenance and maintenance.tech_id == tech.tech_id %}selected{% endif %}>
+                                {{ tech.name }} - {{ tech.specialization or 'General' }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="event_type" class="form-label">Event Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="event_type" name="event_type" required>
+                            <option value="">Select Type</option>
+                            <option value="CALIBRATION" {% if maintenance and maintenance.event_type == 'CALIBRATION' %}selected{% endif %}>Calibration</option>
+                            <option value="REPAIR" {% if maintenance and maintenance.event_type == 'REPAIR' %}selected{% endif %}>Repair</option>
+                            <option value="REPLACEMENT" {% if maintenance and maintenance.event_type == 'REPLACEMENT' %}selected{% endif %}>Replacement</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="event_date" class="form-label">Event Date <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" id="event_date" name="event_date" 
+                               value="{{ maintenance.event_date.strftime('%Y-%m-%dT%H:%M') if maintenance else '' }}" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="4" 
+                              placeholder="Describe the maintenance work performed...">{{ maintenance.notes if maintenance else '' }}</textarea>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> 
+                    <strong>Note:</strong> If event type is REPAIR or REPLACEMENT, the sensor status will automatically be set to MAINTENANCE.
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <a href="{{ url_for('maintenance_list') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

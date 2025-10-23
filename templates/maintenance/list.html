@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Events - Microclimate Sensor Grid{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-tools"></i> Maintenance Events</h1>
+        <div>
+            <a href="{{ url_for('export_maintenance_csv') }}" class="btn btn-success me-2">
+                <i class="bi bi-download"></i> Export to CSV
+            </a>
+            <a href="{{ url_for('maintenance_create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Log New Event
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <select name="sensor" class="form-select">
+                        <option value="">All Sensors</option>
+                        {% for sensor in sensors %}
+                        <option value="{{ sensor.sensor_id }}" {% if sensor_filter == sensor.sensor_id|string %}selected{% endif %}>
+                            {{ sensor.model }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="tech" class="form-select">
+                        <option value="">All Technicians</option>
+                        {% for tech in technicians %}
+                        <option value="{{ tech.tech_id }}" {% if tech_filter == tech.tech_id|string %}selected{% endif %}>
+                            {{ tech.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="event_type" class="form-select">
+                        <option value="">All Event Types</option>
+                        <option value="CALIBRATION" {% if event_filter == 'CALIBRATION' %}selected{% endif %}>Calibration</option>
+                        <option value="REPAIR" {% if event_filter == 'REPAIR' %}selected{% endif %}>Repair</option>
+                        <option value="REPLACEMENT" {% if event_filter == 'REPLACEMENT' %}selected{% endif %}>Replacement</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-funnel"></i> Apply Filters
+                    </button>
+                    <a href="{{ url_for('maintenance_list') }}" class="btn btn-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Sensor</th>
+                            <th>Technician</th>
+                            <th>Event Type</th>
+                            <th>Event Date</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in maintenance_events %}
+                        <tr>
+                            <td>{{ event.maintenance_id }}</td>
+                            <td>{{ event.sensor.model }}</td>
+                            <td>{{ event.technician.name }}</td>
+                            <td>
+                                {% if event.event_type == 'CALIBRATION' %}
+                                <span class="badge bg-info">Calibration</span>
+                                {% elif event.event_type == 'REPAIR' %}
+                                <span class="badge bg-warning">Repair</span>
+                                {% else %}
+                                <span class="badge bg-danger">Replacement</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ event.event_date|datetime }}</td>
+                            <td>{{ event.notes[:50] if event.notes else '-' }}{{ '...' if event.notes and event.notes|length > 50 else '' }}</td>
+                            <td>
+                                <a href="{{ url_for('maintenance_edit', maintenance_id=event.maintenance_id) }}" 
+                                   class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" action="{{ url_for('maintenance_delete', maintenance_id=event.maintenance_id) }}" 
+                                      style="display: inline;" onsubmit="return confirm('Are you sure?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No maintenance events found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
