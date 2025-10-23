@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, Response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from config import config
 from models import db, User, SensorType, Location, Sensor, Reading, Technician, MaintenanceEvent, SensorStatusLog
 from sqlalchemy import func, text
 from datetime import datetime
 import os
+import csv
+from io import StringIO
 
 def create_app(config_name='development'):
     """Application factory function"""
@@ -828,6 +830,245 @@ def api_latest_reading(sensor_id):
     if reading:
         return jsonify(reading.to_dict())
     return jsonify({'error': 'No readings found'}), 404
+
+# =====================================================
+# CSV EXPORT ROUTES
+# =====================================================
+
+@app.route('/export/sensors/csv')
+@login_required
+def export_sensors_csv():
+    """Export all sensors to CSV"""
+    # Get all sensors with related data
+    sensors = db.session.query(
+        Sensor, SensorType, Location
+    ).join(
+        SensorType, Sensor.type_id == SensorType.type_id
+    ).join(
+        Location, Sensor.location_id == Location.location_id
+    ).all()
+    
+    # Create CSV
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Write header
+    writer.writerow(['ID', 'Model', 'Type', 'Location', 'Latitude', 'Longitude', 
+                     'Install Date', 'Status', 'Created At'])
+    
+    # Write data
+    for sensor, sensor_type, location in sensors:
+        writer.writerow([
+            sensor.sensor_id,
+            sensor.model,
+            sensor_type.name,
+            location.area_name,
+            float(location.latitude),
+            float(location.longitude),
+            sensor.install_date.strftime('%Y-%m-%d'),
+            sensor.status,
+            sensor.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        ])
+    
+    # Create response
+    output = si.getvalue()
+    si.close()
+    
+    return Response(
+        output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=sensors_export.csv'}
+    )
+
+@app.route('/export/readings/csv')
+@login_required
+def export_readings_csv():
+    """Export all readings to CSV"""
+    # Get all readings with related data
+    readings = db.session.query(
+        Reading, Sensor, SensorType, Location
+    ).join(
+        Sensor, Reading.sensor_id == Sensor.sensor_id
+    ).join(
+        SensorType, Sensor.type_id == SensorType.type_id
+    ).join(
+        Location, Sensor.location_id == Location.location_id
+    ).order_by(Reading.reading_timestamp.desc()).limit(10000).all()
+    
+    # Create CSV
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Write header
+    writer.writerow(['Reading ID', 'Sensor ID', 'Sensor Model', 'Sensor Type', 
+                     'Location', 'Reading Value', 'Timestamp'])
+    
+    # Write data
+    for reading, sensor, sensor_type, location in readings:
+        writer.writerow([
+            reading.reading_id,
+            sensor.sensor_id,
+            sensor.model,
+            sensor_type.name,
+            location.area_name,
+            float(reading.reading_value),
+            reading.reading_timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        ])
+    
+    # Create response
+    output = si.getvalue()
+    si.close()
+    
+    return Response(
+        output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=readings_export.csv'}
+    )
+
+@app.route('/export/locations/csv')
+@login_required
+def export_locations_csv():
+    """Export all locations to CSV"""
+    locations = Location.query.all()
+    
+    # Create CSV
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Write header
+    writer.writerow(['ID', 'Area Name', 'Latitude', 'Longitude', 'Elevation (m)', 'Created At'])
+    
+    # Write data
+    for location in locations:
+        writer.writerow([
+            location.location_id,
+            location.area_name,
+            float(location.latitude),
+            float(location.longitude),
+            float(location.elevation) if location.elevation else 0.0,
+            location.created_at.strftime('%Y-%m-%d %H:%M:%S') if location.created_at else ''
+        ])
+    
+    # Create response
+    output = si.getvalue()
+    si.close()
+    
+    return Response(
+        output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=locations_export.csv'}
+    )
+
+@app.route('/export/technicians/csv')
+@login_required
+def export_technicians_csv():
+    """Export all technicians to CSV"""
+    technicians = Technician.query.all()
+    
+    # Create CSV
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Write header
+    writer.writerow(['ID', 'Name', 'Contact Number', 'Specialization', 'Created At'])
+    
+    # Write data
+    for tech in technicians:
+        writer.writerow([
+            tech.tech_id,
+            tech.name,
+            tech.contact_no or '',
+            tech.specialization or '',
+            tech.created_at.strftime('%Y-%m-%d %H:%M:%S') if tech.created_at else ''
+        ])
+    
+    # Create response
+    output = si.getvalue()
+    si.close()
+    
+    return Response(
+        output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=technicians_export.csv'}
+    )
+
+@app.route('/export/maintenance/csv')
+@login_required
+def export_maintenance_csv():
+    """Export all maintenance events to CSV"""
+    maintenance_events = db.session.query(
+        MaintenanceEvent, Sensor, Technician
+    ).join(
+        Sensor, MaintenanceEvent.sensor_id == Sensor.sensor_id
+    ).join(
+        Technician, MaintenanceEvent.tech_id == Technician.tech_id
+    ).order_by(MaintenanceEvent.event_date.desc()).all()
+    
+    # Create CSV
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Write header
+    writer.writerow(['ID', 'Sensor Model', 'Technician', 'Event Type', 
+                     'Event Date', 'Notes', 'Created At'])
+    
+    # Write data
+    for event, sensor, tech in maintenance_events:
+        writer.writerow([
+            event.maintenance_id,
+            sensor.model,
+            tech.name,
+            event.event_type,
+            event.event_date.strftime('%Y-%m-%d %H:%M:%S'),
+            event.notes or '',
+            event.created_at.strftime('%Y-%m-%d %H:%M:%S') if event.created_at else ''
+        ])
+    
+    # Create response
+    output = si.getvalue()
+    si.close()
+    
+    return Response(
+        output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=maintenance_export.csv'}
+    )
+
+@app.route('/export/sensor-types/csv')
+@login_required
+def export_sensor_types_csv():
+    """Export all sensor types to CSV"""
+    sensor_types = SensorType.query.all()
+    
+    # Create CSV
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Write header
+    writer.writerow(['ID', 'Name', 'Description', 'Created At'])
+    
+    # Write data
+    for st in sensor_types:
+        writer.writerow([
+            st.type_id,
+            st.name,
+            st.description or '',
+            st.created_at.strftime('%Y-%m-%d %H:%M:%S') if st.created_at else ''
+        ])
+    
+    # Create response
+    output = si.getvalue()
+    si.close()
+    
+    return Response(
+        output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=sensor_types_export.csv'}
+    )
+
+# =====================================================
+# TEMPLATE FILTERS
+# =====================================================
 
 # =====================================================
 # ERROR HANDLERS
